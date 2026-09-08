@@ -97,7 +97,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
                 <tr key={o.skin_key}>
                   <td>
                     <div
-                      className="odds-thumb"
+                      className={`odds-thumb tier-${o.rarity}`}
                       style={{ ["--glow" as string]: color }}
                     >
                       <img src={o.image_url} alt="" />

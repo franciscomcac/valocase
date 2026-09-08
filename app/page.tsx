@@ -49,30 +49,41 @@ export default async function HomePage() {
       <div className="wrap-wide section" id="cases">
         <h2>Cases</h2>
         <div className="case-grid">
-          {(cases ?? []).map((c) => (
-            <div className={`case-card${c.disabled ? " is-locked" : ""}`} key={c.id}>
-              <div className="banner" style={{ backgroundImage: `url(${c.banner_url})` }}>
-                {c.disabled && <div className="ribbon">Coming Soon</div>}
-                <div className="banner-fade" />
-              </div>
-              <div className="info">
-                <h3>{c.name}</h3>
-                <div className="tagline">{c.tagline}</div>
-                <div className="price-row">
-                  <span className="price-tag">{c.cost.toLocaleString()} VC</span>
-                  {c.disabled ? (
-                    <button className="btn disabled" disabled>
-                      Locked
-                    </button>
-                  ) : (
-                    <Link className="btn" href={`/case/${c.id}`}>
-                      Open
-                    </Link>
-                  )}
+          {(() => {
+            const list = cases ?? [];
+            // one open case gets the big feature slot; the rest stack beside it -
+            // an asymmetric 12-col layout instead of a uniform card grid
+            const featuredIdx = list.findIndex((c) => !c.disabled);
+            const slots = ["feature", "side1", "side2"];
+            let slotCursor = 0;
+            return list.map((c, i) => {
+              const slot = i === featuredIdx ? "feature" : slots.filter((s) => s !== "feature")[slotCursor++] ?? "side1";
+              return (
+                <div className={`case-card ${slot}${c.disabled ? " is-locked" : ""}`} key={c.id}>
+                  <div className="banner" style={{ backgroundImage: `url(${c.banner_url})` }}>
+                    {c.disabled && <div className="ribbon">Coming Soon</div>}
+                    <div className="banner-fade" />
+                  </div>
+                  <div className="info">
+                    <h3>{c.name}</h3>
+                    <div className="tagline">{c.tagline}</div>
+                    <div className="price-row">
+                      <span className="price-tag">{c.cost.toLocaleString()} VC</span>
+                      {c.disabled ? (
+                        <button className="btn disabled" disabled>
+                          Locked
+                        </button>
+                      ) : (
+                        <Link className="btn" href={`/case/${c.id}`}>
+                          Open
+                        </Link>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+            });
+          })()}
         </div>
       </div>
 

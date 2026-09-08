@@ -45,6 +45,17 @@ export default function CaseClient({
   const [flashColor, setFlashColor] = useState<string | null>(null);
   const [impact, setImpact] = useState(false);
 
+  // Two-stage landing physics: the reel doesn't ease straight into the
+  // winner, it overshoots slightly past it (fast, weighty deceleration)
+  // then snaps back with a small bounce - like something with real mass
+  // settling, not a div gliding to a stop. Both phases are driven by
+  // actual CSS transitions (transform + filter share the same duration),
+  // never by a setTimeout guessing where the animation "probably" is.
+  const phaseRef = useRef<"idle" | "phase1" | "phase2">("idle");
+  const exactTargetRef = useRef(0);
+  const pendingWinnerRef = useRef<OpenResult | null>(null);
+  const pendingCountRef = useRef(0);
+
   const skinByKey = Object.fromEntries(items.map((i) => [i.skin_key, i]));
 
   function flashToast(msg: string) {
@@ -75,6 +86,8 @@ export default function CaseClient({
 
     const results: OpenResult[] = data.results;
     const winner = results[0];
+    pendingWinnerRef.current = winner;
+    pendingCountRef.current = results.length;
 
     // build a long filler strip with the real winner planted near the end
     const stripLength = 60;
@@ -91,38 +104,48 @@ export default function CaseClient({
     setTransition("none");
     setTranslateX(0);
     setStrip(built);
-    setBlurAmount(0);
+    setBlurAmount(8); // full blur, set instantly (no transition) before launch
 
     requestAnimationFrame(() => {
       const viewportWidth = viewportRef.current?.clientWidth ?? 1060;
-      const jitter = (Math.random() * 0.6 - 0.3) * ITEM_WIDTH;
+      const jitter = (Math.random() * 0.4 - 0.2) * ITEM_WIDTH;
       const targetX = -(targetIndex * ITEM_WIDTH + ITEM_WIDTH / 2 - viewportWidth / 2) + jitter;
+      exactTargetRef.current = targetX;
+      const overshootX = targetX - ITEM_WIDTH * 0.16;
+
       requestAnimationFrame(() => {
-        setTransition("transform 5.2s cubic-bezier(0.11, 0.79, 0.15, 1)");
-        setTranslateX(targetX);
-        // motion blur ramps up hard on launch, then eases off as the reel
-        // decelerates into the winner - tied to the same cubic-bezier feel
-        setBlurAmount(7);
-        setTimeout(() => setBlurAmount(3), 900);
-        setTimeout(() => setBlurAmount(1.2), 2600);
-        setTimeout(() => setBlurAmount(0), 4600);
+        phaseRef.current = "phase1";
+        setTransition("transform 4.6s cubic-bezier(0.12, 0.85, 0.16, 1), filter 4.2s ease-out");
+        setTranslateX(overshootX);
+        setBlurAmount(0); // decays over the same 4.2s, tied to the transition itself
       });
     });
+  }
 
-    const winnerColor = rarities[skinByKey[winner.skin_key]?.rarity]?.color ?? "#f2b632";
+  function handleTrackTransitionEnd(e: React.TransitionEvent<HTMLDivElement>) {
+    if (e.propertyName !== "transform") return;
 
-    setTimeout(() => {
+    if (phaseRef.current === "phase1") {
+      // bounce back from the overshoot to the exact winning position
+      phaseRef.current = "phase2";
+      setTransition("transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1)");
+      setTranslateX(exactTargetRef.current);
+      return;
+    }
+
+    if (phaseRef.current === "phase2") {
+      phaseRef.current = "idle";
+      const winner = pendingWinnerRef.current;
+      if (!winner) return;
+      const winnerColor = rarities[skinByKey[winner.skin_key]?.rarity]?.color ?? "#f2b632";
       setFlashColor(winnerColor);
       setImpact(true);
       setTimeout(() => setImpact(false), 450);
-    }, 5150);
-
-    setTimeout(() => {
       setResult(winner);
-      setExtraCount(results.length - 1);
+      setExtraCount(pendingCountRef.current - 1);
       setSpinning(false);
       router.refresh(); // re-pull balance from the server for the header pill
-    }, 5300);
+    }
   }
 
   async function sellResult() {
@@ -161,7 +184,7 @@ export default function CaseClient({
       {result && (
         <div className="result-banner show">
           <div
-            className="reel-item-glow result-glow"
+            className={`reel-item-glow result-glow tier-${skinByKey[result.skin_key]?.rarity ?? "common"}`}
             style={{ ["--glow" as string]: rarities[skinByKey[result.skin_key]?.rarity]?.color ?? "#888" }}
           >
             <img src={result.image_url} alt={result.name} />
@@ -196,6 +219,7 @@ export default function CaseClient({
         {impact && <div className="reel-flash" />}
         <div
           className="reel-track"
+          onTransitionEnd={handleTrackTransitionEnd}
           style={{
             transform: `translateX(${translateX}px)`,
             transition,
@@ -206,7 +230,7 @@ export default function CaseClient({
             const color = rarities[skin.rarity]?.color ?? "#888";
             return (
               <div className="reel-item" key={i}>
-                <div className="reel-item-glow" style={{ ["--glow" as string]: color }}>
+                <div className={`reel-item-glow tier-${skin.rarity}`} style={{ ["--glow" as string]: color }}>
                   <img src={skin.image_url} alt={skin.name} />
                 </div>
                 <div className="name">{skin.name}</div>
