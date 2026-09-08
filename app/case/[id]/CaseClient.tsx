@@ -139,7 +139,12 @@ export default function CaseClient({
 
       {result && (
         <div className="result-banner show">
-          <img src={result.image_url} alt={result.name} />
+          <div
+            className="reel-item-glow result-glow"
+            style={{ ["--glow" as string]: rarities[skinByKey[result.skin_key]?.rarity]?.color ?? "#888" }}
+          >
+            <img src={result.image_url} alt={result.name} />
+          </div>
           <div className="rb-text">
             <div className="won-label">You unboxed</div>
             <div className="won-name">
@@ -162,13 +167,18 @@ export default function CaseClient({
           className="reel-track"
           style={{ transform: `translateX(${translateX}px)`, transition }}
         >
-          {strip.map((skin, i) => (
-            <div className="reel-item" key={i}>
-              <img src={skin.image_url} alt={skin.name} />
-              <div className="name">{skin.name}</div>
-              <div className="rarity-bar" style={{ background: rarities[skin.rarity]?.color }} />
-            </div>
-          ))}
+          {strip.map((skin, i) => {
+            const color = rarities[skin.rarity]?.color ?? "#888";
+            return (
+              <div className="reel-item" key={i}>
+                <div className="reel-item-glow" style={{ ["--glow" as string]: color }}>
+                  <img src={skin.image_url} alt={skin.name} />
+                </div>
+                <div className="name">{skin.name}</div>
+                <div className="rarity-bar" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+              </div>
+            );
+          })}
         </div>
       </div>
 

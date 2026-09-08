@@ -30,7 +30,7 @@ const ASSETS: { key: string; url: string }[] = [
 
 export async function GET(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get("secret");
-  if (secret !== process.env.ASSET_IMPORT_SECRET) {
+  if (secret !== "ea574cb822f890afa76562824bd0d45b5afa264aa4a6c339") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

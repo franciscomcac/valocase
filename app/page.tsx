@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SiteHeader from "@/components/SiteHeader";
+import ParallaxHero from "@/components/ParallaxHero";
+
+const ASSET_BASE =
+  "https://fwukxevjcgdialzxwxoi.supabase.co/storage/v1/object/public/site-assets";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -24,24 +28,24 @@ export default async function HomePage() {
     <>
       <SiteHeader active="cases" initialBalance={profile?.balance ?? 0} />
 
-      <div className="hero">
-        <div className="wrap">
-          <h1>Open cases. Win skins. Zero dollars spent.</h1>
-          <p>
-            A fun-money case-opening sandbox built around real Valorant skin data.
-            Every account starts with 10,000 VC to burn.
-          </p>
-          <div className="fake-note">This is a demo/portfolio project, not a store.</div>
-        </div>
-      </div>
+      <ParallaxHero backdropUrl={`${ASSET_BASE}/hero-backdrop.png`}>
+        <div className="hero-eyebrow">Fan-made &middot; fun-money only</div>
+        <h1>Open cases. Win skins. Zero dollars spent.</h1>
+        <p>
+          A fun-money case-opening sandbox built around real Valorant skin data.
+          Every account starts with 10,000 VC to burn.
+        </p>
+        <div className="fake-note">This is a demo/portfolio project, not a store.</div>
+      </ParallaxHero>
 
       <div className="wrap section" id="cases">
         <h2>Cases</h2>
         <div className="case-grid">
           {(cases ?? []).map((c) => (
-            <div className="case-card" key={c.id}>
-              <div className="thumb">
-                <img src={c.banner_url} alt={c.name} loading="lazy" />
+            <div className={`case-card${c.disabled ? " is-locked" : ""}`} key={c.id}>
+              <div className="banner" style={{ backgroundImage: `url(${c.banner_url})` }}>
+                {c.disabled && <div className="ribbon">Coming Soon</div>}
+                <div className="banner-fade" />
               </div>
               <div className="info">
                 <h3>{c.name}</h3>

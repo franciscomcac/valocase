@@ -64,8 +64,8 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       <SiteHeader active="cases" initialBalance={profile?.balance ?? 0} />
 
       <div className="wrap section">
-        <div className="case-header">
-          <img src={caseDef.banner_url} alt={caseDef.name} />
+        <div className="case-header" style={{ backgroundImage: `url(${caseDef.banner_url})` }}>
+          <div className="case-header-fade" />
           <div className="meta">
             <h1>{caseDef.name}</h1>
             <div className="tagline">{caseDef.tagline}</div>
@@ -91,19 +91,27 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             </tr>
           </thead>
           <tbody>
-            {odds.map((o) => (
-              <tr key={o.skin_key}>
-                <td>
-                  <img src={o.image_url} alt="" />
-                </td>
-                <td>{o.name}</td>
-                <td>
-                  <span className="rarity-dot" style={{ background: rarities[o.rarity]?.color }} />
-                  {rarities[o.rarity]?.label}
-                </td>
-                <td>{o.chance.toFixed(2)}%</td>
-              </tr>
-            ))}
+            {odds.map((o) => {
+              const color = rarities[o.rarity]?.color ?? "#888";
+              return (
+                <tr key={o.skin_key}>
+                  <td>
+                    <div
+                      className="odds-thumb"
+                      style={{ ["--glow" as string]: color }}
+                    >
+                      <img src={o.image_url} alt="" />
+                    </div>
+                  </td>
+                  <td>{o.name}</td>
+                  <td>
+                    <span className="rarity-dot" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />
+                    {rarities[o.rarity]?.label}
+                  </td>
+                  <td>{o.chance.toFixed(2)}%</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
