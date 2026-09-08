@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SiteHeader from "@/components/SiteHeader";
 import ParallaxHero from "@/components/ParallaxHero";
+import LiveFeed from "@/components/LiveFeed";
 
 const ASSET_BASE =
   "https://fwukxevjcgdialzxwxoi.supabase.co/storage/v1/object/public/site-assets";
@@ -24,6 +25,11 @@ export default async function HomePage() {
     .select("id, name, tagline, cost, banner_url, disabled")
     .order("cost", { ascending: true });
 
+  const { data: rarityRows } = await supabase.from("rarities").select("key, label, color");
+  const rarities = Object.fromEntries((rarityRows ?? []).map((r) => [r.key, r]));
+
+  const { data: drops } = await supabase.rpc("recent_drops", { p_limit: 14 });
+
   return (
     <>
       <SiteHeader active="cases" initialBalance={profile?.balance ?? 0} />
@@ -38,7 +44,9 @@ export default async function HomePage() {
         <div className="fake-note">This is a demo/portfolio project, not a store.</div>
       </ParallaxHero>
 
-      <div className="wrap section" id="cases">
+      <LiveFeed drops={drops ?? []} rarities={rarities} />
+
+      <div className="wrap-wide section" id="cases">
         <h2>Cases</h2>
         <div className="case-grid">
           {(cases ?? []).map((c) => (

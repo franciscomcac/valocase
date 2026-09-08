@@ -63,7 +63,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
     <>
       <SiteHeader active="cases" initialBalance={profile?.balance ?? 0} />
 
-      <div className="wrap section">
+      <div className="wrap-wide section">
         <div className="case-header" style={{ backgroundImage: `url(${caseDef.banner_url})` }}>
           <div className="case-header-fade" />
           <div className="meta">

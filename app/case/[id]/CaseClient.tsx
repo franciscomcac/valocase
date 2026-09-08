@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Skin = {
@@ -16,7 +16,7 @@ type Rarity = { key: string; label: string; color: string };
 
 type OpenResult = { skin_key: string; name: string; image_url: string; value: number; inventory_id: string };
 
-const ITEM_WIDTH = 150;
+const ITEM_WIDTH = 240;
 
 export default function CaseClient({
   caseId,
@@ -32,6 +32,7 @@ export default function CaseClient({
   balance: number;
 }) {
   const router = useRouter();
+  const viewportRef = useRef<HTMLDivElement>(null);
   const [strip, setStrip] = useState<Skin[]>(items);
   const [translateX, setTranslateX] = useState(0);
   const [transition, setTransition] = useState("none");
@@ -40,6 +41,9 @@ export default function CaseClient({
   const [extraCount, setExtraCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [blurAmount, setBlurAmount] = useState(0);
+  const [flashColor, setFlashColor] = useState<string | null>(null);
+  const [impact, setImpact] = useState(false);
 
   const skinByKey = Object.fromEntries(items.map((i) => [i.skin_key, i]));
 
@@ -53,6 +57,8 @@ export default function CaseClient({
     setError(null);
     setResult(null);
     setSpinning(true);
+    setFlashColor(null);
+    setImpact(false);
 
     const res = await fetch("/api/case/open", {
       method: "POST",
@@ -85,16 +91,31 @@ export default function CaseClient({
     setTransition("none");
     setTranslateX(0);
     setStrip(built);
+    setBlurAmount(0);
 
     requestAnimationFrame(() => {
-      const viewportWidth = 1060; // matches max content width minus padding, good enough for the effect
+      const viewportWidth = viewportRef.current?.clientWidth ?? 1060;
       const jitter = (Math.random() * 0.6 - 0.3) * ITEM_WIDTH;
       const targetX = -(targetIndex * ITEM_WIDTH + ITEM_WIDTH / 2 - viewportWidth / 2) + jitter;
       requestAnimationFrame(() => {
         setTransition("transform 5.2s cubic-bezier(0.11, 0.79, 0.15, 1)");
         setTranslateX(targetX);
+        // motion blur ramps up hard on launch, then eases off as the reel
+        // decelerates into the winner - tied to the same cubic-bezier feel
+        setBlurAmount(7);
+        setTimeout(() => setBlurAmount(3), 900);
+        setTimeout(() => setBlurAmount(1.2), 2600);
+        setTimeout(() => setBlurAmount(0), 4600);
       });
     });
+
+    const winnerColor = rarities[skinByKey[winner.skin_key]?.rarity]?.color ?? "#f2b632";
+
+    setTimeout(() => {
+      setFlashColor(winnerColor);
+      setImpact(true);
+      setTimeout(() => setImpact(false), 450);
+    }, 5150);
 
     setTimeout(() => {
       setResult(winner);
@@ -161,11 +182,25 @@ export default function CaseClient({
         </div>
       )}
 
-      <div className="reel-viewport">
+      <div
+        ref={viewportRef}
+        className={`reel-viewport${spinning ? " is-spinning" : ""}${impact ? " is-impact" : ""}`}
+        style={flashColor ? ({ ["--flash" as string]: flashColor } as React.CSSProperties) : undefined}
+      >
+        <div className="reel-scanlines" />
+        <div className="reel-corner tl" />
+        <div className="reel-corner tr" />
+        <div className="reel-corner bl" />
+        <div className="reel-corner br" />
         <div className="reel-marker" />
+        {impact && <div className="reel-flash" />}
         <div
           className="reel-track"
-          style={{ transform: `translateX(${translateX}px)`, transition }}
+          style={{
+            transform: `translateX(${translateX}px)`,
+            transition,
+            filter: blurAmount ? `blur(${blurAmount}px)` : "none",
+          }}
         >
           {strip.map((skin, i) => {
             const color = rarities[skin.rarity]?.color ?? "#888";
